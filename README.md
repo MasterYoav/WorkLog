@@ -1,50 +1,175 @@
-# Welcome to your Expo app 👋
+<div align="center">
+  <img src="assets/logo.png" alt="WorkLog Logo" width="200"/>
+</div>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# WorkLog (Mobile)
 
-## Get started
+A cross-platform **time & project management** app for small teams (≤ ~50 workers) built with **Expo + React Native**.  
+WorkLog lets **employers** create projects and track their own shifts, while **workers** clock in/out with location verification. Data is stored locally for MVP; cloud sync can be added later.
 
-1. Install dependencies
+## ✨ Features (MVP)
 
-   ```bash
-   npm install
-   ```
+### Worker
+- **Login with Employee Number + Password**
+  - First-time registration via *“Initial Registration”* (Full Name, Israeli ID, Employer Number + chosen password).
+  - “Forgot Password” resets to the worker’s **ID number**.
+- **Time Clock**
+  - Clock **in/out** with GPS validation: within a configured radius of the job site.
+  - Shows live elapsed time; saves start time, end time, and **human-readable address** (street + city).
+- **Personal Info / History**
+  - Month/Year selector to view past shifts.
+  - Monthly total hours + list of shifts: `[Date, Duration, Location]`.
 
-2. Start the app
+### Employer
+- **Employer Login** (Employer Number + Password) & **Initial Registration** (company name + password).
+- **Employer Home** with side menu (open/close):
+  - **Time Clock** for employer (with seconds HH:MM:SS).
+  - **Personal Info**: month/year selector + monthly total + shift list.
+  - **My Workers**: list of all workers (sorted by oldest → newest), showing **total hours (all time)** per worker.
+  - **My Projects**:
+    - Create a project with **Name** + **Location**.
+    - See project list with creation date, open a project details page.
+    - Project page: **Add Media** (camera, gallery, file), view media list, select & **delete** media.
 
-   ```bash
-   npx expo start
-   ```
+> Logo is shown from `assets/logo.png` anywhere the app name would normally appear.
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🧱 Tech Stack
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- **React Native** (Expo)
+- **expo-router** (navigation)
+- **AsyncStorage** (local storage for MVP)
+- **expo-location** (GPS + reverse geocoding)
+- **expo-image-picker** (camera + gallery)
+- **expo-document-picker** (file picker)
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 📂 Project Structure (high level)
 
-```bash
-npm run reset-project
+```
+app/
+  _layout.tsx
+  auth.tsx                # Worker login + initial registration
+  employer-auth.tsx       # Employer login + initial registration
+  employer-home.tsx       # Employer dashboard + side menu & sections
+  employer-project.tsx    # Project details + media management
+  clock.tsx               # Worker’s time clock (existing)
+  profile.tsx             # Worker’s personal info w/ month-year filter
+assets/
+  logo.png                # App logo used in headers
+src/
+  lib/
+    storage.ts            # Employers, Workers, Punches, Projects, Media (AsyncStorage)
+    location.ts           # Location helpers, reverse geocode, distance
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## ⚙️ Setup
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+# 1) Install dependencies
+npm install
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# 2) Make sure required Expo libs are installed
+npx expo install expo-location expo-image-picker expo-document-picker @react-native-async-storage/async-storage
 
-## Join the community
+# 3) Start the app
+npx expo start
+```
 
-Join our community of developers creating universal apps.
+### App config (already included)
+`app.json` includes camera/photo/library/location permissions and `"expo-image-picker"` plugin.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 📍 Location Rules (MVP)
+
+- Clock in/out is allowed **only** within a configured radius of the job site.
+- Constants (in `app/employer-home.tsx` and `app/clock.tsx`):
+  ```ts
+  const SITE_LAT = 32.1105;
+  const SITE_LNG = 34.9845;
+  const RADIUS_M = 4000;  // 4km for testing
+  const ACCURACY_MAX = 75; // meters
+  ```
+- Reverse geocoding displays **street, city** when available.
+
+> Adjust these values for your real site coordinates and radius.
+
+---
+
+## 🔐 Auth & Data (MVP notes)
+
+- **Local-only** storage (AsyncStorage). No server or cloud sync yet.
+- Worker passwords are plain text (MVP!) → should be replaced with proper auth in production.
+- Employer/Worker numbers are generated locally and unique per device.
+
+---
+
+## 🧭 Worker Flow
+
+1. Open the app → Worker login screen.
+2. If first time, tap **“Initial Registration”**:
+   - Enter Full Name, Israeli ID, Employer Number, choose a Password.
+   - You’ll receive your **Employee Number** (also shown in your profile).
+3. Log in with **Employee Number + Password**.
+4. Use the **Clock** to start/finish the shift.  
+   Your **Personal Info** shows monthly totals and shift history.
+
+---
+
+## 🧭 Employer Flow
+
+1. Go to **Employer Login** (top-right on worker login screen).
+2. Either log in or do **“Initial Registration”** (company + password).
+3. In **Employer Home**, use side menu:
+   - **Clock** (employer)
+   - **Personal Info** (month/year)
+   - **My Workers** (total hours per worker, all time)
+   - **My Projects** (create + open projects)
+4. In **Project page**:
+   - **Add Media**: pick **Camera / Gallery / File**
+   - See media list and delete selected items.
+
+---
+
+## 🧭 Roadmap (Next steps)
+
+- **Cloud backend**: Supabase/Postgres with RLS or Firebase for:
+  - Employers, Workers, Projects, Media, Punches (with sync).
+- **Auth**: Proper authentication, passwords hashing, sessions/JWT.
+- **Multiple job sites** & per-project geofencing.
+- **Offline sync** + conflict resolution.
+- **Payroll exports** (CSV/Excel/PDF) & configurable pay rules.
+- **Project media**: thumbnails, previews, full-screen viewer, tagging, comments.
+- **Roles & permissions** (owner, manager, worker).
+- **Push notifications** (reminders, shift confirmations).
+- **Analytics & dashboards** (per project/worker/month).
+- **Localization** (EN/HE), **Accessibility**, **Dark mode** polish.
+- **Testing** (unit/E2E) + **CI/CD** (EAS Build, automatic releases).
+
+---
+
+## 🐛 Troubleshooting
+
+- **VirtualizedLists inside ScrollView warning**  
+  Fixed by rendering each list inside its own `FlatList` + `ListHeaderComponent` (no `ScrollView` wrapping lists).
+- **Location denied**  
+  Ensure you accepted permissions and you’re within `RADIUS_M` meters of `SITE_LAT/LNG`.
+- **Media pickers**  
+  Accept camera/photo/files permissions when prompted.
+
+---
+
+## 🤝 Contributing
+
+PRs and discussions are welcome! For now this is an MVP; guidelines will be added after backend integration.
+
+---
+
+## 🛡️ License
+
+TBD (recommend MIT). Add a `LICENSE` file if you want open-source.
