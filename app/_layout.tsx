@@ -5,18 +5,17 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      {/* We set auth as the initial route, add clock, and keep existing tabs & modal for later */}
+      <Stack initialRouteName="auth">
+        {/* Login screen (we'll add app/auth.tsx next) */}
+        <Stack.Screen name="auth" options={{ title: 'Login' }} />
+        {/* Clock screen (we'll add app/clock.tsx next) */}
+        <Stack.Screen name="clock" options={{ title: 'WorkLog' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
