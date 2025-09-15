@@ -5,7 +5,7 @@
 A cross-platform **time & project management** app for small teams (≤ ~50 workers) built with **Expo + React Native**.  
 WorkLog lets **employers** create projects and track their own shifts, while **workers** clock in/out with location verification. Data is stored locally for MVP; cloud sync can be added later.
 
-## ✨ Features (MVP)
+## ✨ Features
 
 ### Worker
 - **Login with Employee Number + Password**
