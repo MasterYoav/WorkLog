@@ -1,267 +1,145 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const k = (s: string) => `worklog:${s}`;
+export type Employer = { employerNo: number; name: string; password: string; email: string; createdAt: string; };
+export type Worker = { empNo: number; fullName: string; tz: string; password: string; employerNo: number; createdAt: string; };
+export type Project = { id: number; employerNo: number; name: string; location: string; createdAt: string; };
+export type Media = { id: string; uri: string; type: 'image'|'video'|'file'; name?: string; createdAt: string; };
+export type Punch = { kind: 'in'|'out'; ts: string; lat: number; lng: number; acc?: number|null; address?: any; address_label?: string; started_at?: string; duration_ms?: number; };
 
-/** ===== Employers ===== */
-export type Employer = {
-  employerNo: number;
-  name: string;
-  password: string;
-  createdAt: string;
+const K = {
+  employers: 'employers',
+  workers: 'workers',
+  seqEmployer: 'seq:employer',
+  seqWorker: 'seq:worker',
+  projects: 'projects',
+  punchesPrefix: 'punches:',      // punches:<id>
+  shiftPrefix: 'shift:',          // shift:<id>
+  mediaPrefix: 'media:',          // media:<projectId>
 };
 
-const KEY_NEXT_EMPLOYER = k('next_employer_no'); // start 5000
-const keyEmployerByNo = (no: string | number) => k(`employer:${no}`);
-const keyEmployerWorkers = (no: string | number) => k(`employer:${no}:workers`); // empNo[]
+async function get<T>(key:string, def:T): Promise<T> {
+  const s = await AsyncStorage.getItem(key); return s ? JSON.parse(s) as T : def;
+}
+async function set<T>(key:string, val:T): Promise<void> {
+  await AsyncStorage.setItem(key, JSON.stringify(val));
+}
+function nextId(x:number){ return (x||0)+1; }
+function randomPassword(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join(''); }
 
-async function getNextEmployerNumber(): Promise<number> {
-  const raw = await AsyncStorage.getItem(KEY_NEXT_EMPLOYER);
-  const current = raw ? parseInt(raw, 10) : 5000;
-  const next = isNaN(current) ? 5001 : current + 1;
-  await AsyncStorage.setItem(KEY_NEXT_EMPLOYER, String(next));
-  return current;
+// ===== Employers
+export async function registerEmployer(name:string, password:string, email:string){
+  const employers = await get<Employer[]>(K.employers, []);
+  const seq = await get<number>(K.seqEmployer, 1000);
+  const employerNo = nextId(seq);
+  const emp: Employer = { employerNo, name, password, email, createdAt: new Date().toISOString() };
+  employers.push(emp);
+  await set(K.employers, employers);
+  await set(K.seqEmployer, employerNo);
+  return emp;
 }
 
-export async function registerEmployer(name: string, password: string): Promise<Employer> {
-  const employerNo = await getNextEmployerNumber();
-  const employer: Employer = {
-    employerNo,
-    name,
-    password,
-    createdAt: new Date().toISOString(),
-  };
-  await AsyncStorage.setItem(keyEmployerByNo(employerNo), JSON.stringify(employer));
-  await AsyncStorage.setItem(keyEmployerWorkers(employerNo), JSON.stringify([]));
-  return employer;
-}
-
-export async function getEmployerByNo(no: string | number): Promise<Employer | null> {
-  const raw = await AsyncStorage.getItem(keyEmployerByNo(no));
-  return raw ? (JSON.parse(raw) as Employer) : null;
-}
-
-export async function loginEmployer(no: string, password: string): Promise<Employer> {
-  const emp = await getEmployerByNo(no);
+export async function loginEmployer(employerNoStr:string, password:string){
+  const employers = await get<Employer[]>(K.employers, []);
+  const no = Number(employerNoStr);
+  const emp = employers.find(e => e.employerNo === no);
   if (!emp) throw new Error('מעסיק לא נמצא');
   if (emp.password !== password) throw new Error('סיסמה שגויה');
   return emp;
 }
 
-/** ===== Workers ===== */
-export type Worker = {
-  empNo: number;
-  fullName: string;
-  tz: string;
-  employerNo: number;
-  password: string; // MVP only
-  createdAt: string;
-};
-
-const KEY_NEXT_WORKER = k('next_emp_no'); // start 1000
-const keyWorkerByEmp = (empNo: string | number) => k(`worker:${empNo}`);
-const keyIdxByTz = (tz: string) => k(`idx:tz:${tz}`);
-
-async function getNextEmployeeNumber(): Promise<number> {
-  const raw = await AsyncStorage.getItem(KEY_NEXT_WORKER);
-  const current = raw ? parseInt(raw, 10) : 1000;
-  const next = isNaN(current) ? 1001 : current + 1;
-  await AsyncStorage.setItem(KEY_NEXT_WORKER, String(next));
-  return current;
+export async function resetEmployerPassword(email:string){
+  const employers = await get<Employer[]>(K.employers, []);
+  const emp = employers.find(e => e.email?.toLowerCase() === email.toLowerCase());
+  if (!emp) throw new Error('מעסיק עם אימייל זה לא נמצא');
+  const newPassword = randomPassword(10);
+  emp.password = newPassword;
+  await set(K.employers, employers);
+  return { newPassword, employer: emp };
 }
 
-export async function getWorkerByEmp(empNo: string | number): Promise<Worker | null> {
-  const raw = await AsyncStorage.getItem(keyWorkerByEmp(String(empNo)));
-  return raw ? (JSON.parse(raw) as Worker) : null;
+export async function changeEmployerPassword(employerNoStr:string, oldPass:string, newPass:string){
+  const employers = await get<Employer[]>(K.employers, []);
+  const no = Number(employerNoStr);
+  const emp = employers.find(e => e.employerNo === no);
+  if (!emp) throw new Error('מעסיק לא נמצא');
+  if (emp.password !== oldPass) throw new Error('סיסמה נוכחית שגויה');
+  emp.password = newPass;
+  await set(K.employers, employers);
 }
 
-export async function getWorkerByTz(tz: string): Promise<Worker | null> {
-  const empRaw = await AsyncStorage.getItem(keyIdxByTz(tz));
-  if (!empRaw) return null;
-  return getWorkerByEmp(empRaw);
+// ===== Workers
+export async function registerEmployee(fullName:string, tz:string, password:string, employerNoStr:string){
+  const workers = await get<Worker[]>(K.workers, []);
+  const employers = await get<Employer[]>(K.employers, []);
+  const employerNo = Number(employerNoStr);
+  if (!employers.find(e => e.employerNo === employerNo)) throw new Error('מספר מעסיק לא קיים');
+
+  const seq = await get<number>(K.seqWorker, 5000);
+  const empNo = nextId(seq);
+  const w: Worker = { empNo, fullName, tz, password, employerNo, createdAt: new Date().toISOString() };
+  workers.push(w);
+  await set(K.workers, workers);
+  await set(K.seqWorker, empNo);
+  return w;
 }
 
-export async function registerEmployee(
-  fullName: string,
-  tz: string,
-  password: string,
-  employerNo: string | number
-): Promise<Worker> {
-  const employer = await getEmployerByNo(employerNo);
-  if (!employer) throw new Error('מספר מעסיק לא קיים');
-
-  const existing = await getWorkerByTz(tz);
-  if (existing) return existing;
-
-  const empNo = await getNextEmployeeNumber();
-  const worker: Worker = {
-    empNo,
-    fullName,
-    tz,
-    employerNo: Number(employerNo),
-    password,
-    createdAt: new Date().toISOString(),
-  };
-  await AsyncStorage.setItem(keyWorkerByEmp(empNo), JSON.stringify(worker));
-  await AsyncStorage.setItem(keyIdxByTz(tz), String(empNo));
-
-  const listRaw = (await AsyncStorage.getItem(keyEmployerWorkers(employerNo))) ?? '[]';
-  const list = JSON.parse(listRaw);
-  list.push(empNo);
-  await AsyncStorage.setItem(keyEmployerWorkers(employerNo), JSON.stringify(list));
-
-  return worker;
-}
-
-export async function loginEmployee(empNo: string, password: string): Promise<Worker> {
-  const w = await getWorkerByEmp(empNo);
+export async function loginEmployee(empNoStr:string, password:string){
+  const workers = await get<Worker[]>(K.workers, []);
+  const no = Number(empNoStr);
+  const w = workers.find(x => x.empNo === no);
   if (!w) throw new Error('עובד לא נמצא');
   if (w.password !== password) throw new Error('סיסמה שגויה');
   return w;
 }
 
-export async function resetPasswordToTz(empNo: string): Promise<void> {
-  const w = await getWorkerByEmp(empNo);
+export async function resetPasswordToTz(empNoStr:string){
+  const workers = await get<Worker[]>(K.workers, []);
+  const no = Number(empNoStr);
+  const w = workers.find(x => x.empNo === no);
   if (!w) throw new Error('עובד לא נמצא');
   w.password = w.tz;
-  await AsyncStorage.setItem(keyWorkerByEmp(empNo), JSON.stringify(w));
+  await set(K.workers, workers);
 }
 
-export async function changePassword(empNo: string, newPassword: string): Promise<void> {
-  const w = await getWorkerByEmp(empNo);
-  if (!w) throw new Error('עובד לא נמצא');
-  w.password = newPassword;
-  await AsyncStorage.setItem(keyWorkerByEmp(empNo), JSON.stringify(w));
+export async function listEmployerWorkers(employerNoStr:string){
+  const employerNo = Number(employerNoStr);
+  const workers = await get<Worker[]>(K.workers, []);
+  return workers.filter(w => w.employerNo === employerNo).sort((a,b)=> a.createdAt.localeCompare(b.createdAt));
 }
 
-export async function listEmployerWorkers(employerNo: string | number): Promise<Worker[]> {
-  const listRaw = (await AsyncStorage.getItem(keyEmployerWorkers(employerNo))) ?? '[]';
-  const ids: number[] = JSON.parse(listRaw);
-  const workers: Worker[] = [];
-  for (const id of ids) {
-    const w = await getWorkerByEmp(id);
-    if (w) workers.push(w);
-  }
-  workers.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  return workers;
-}
+// ===== Punches & shift
+export async function saveShiftStart(id:string, iso:string){ await AsyncStorage.setItem(K.shiftPrefix+id, iso); }
+export async function loadShiftStart(id:string){ return await AsyncStorage.getItem(K.shiftPrefix+id); }
+export async function clearShiftStart(id:string){ await AsyncStorage.removeItem(K.shiftPrefix+id); }
 
-/** ===== Punches ===== */
-const keyShiftStart = (empNo: string | number) => k(`shift_start:${empNo}`);
-const keyPunches = (empNo: string | number) => k(`punches:${empNo}`);
-
-export async function saveShiftStart(empNo: string | number, iso: string) {
-  await AsyncStorage.setItem(keyShiftStart(empNo), iso);
-}
-export async function loadShiftStart(empNo: string | number): Promise<string | null> {
-  return AsyncStorage.getItem(keyShiftStart(empNo));
-}
-export async function clearShiftStart(empNo: string | number) {
-  await AsyncStorage.removeItem(keyShiftStart(empNo));
-}
-
-export async function appendLocalPunch(empNo: string | number, punch: any) {
-  const key = keyPunches(empNo);
-  const raw = (await AsyncStorage.getItem(key)) ?? '[]';
-  const arr = JSON.parse(raw);
+export async function appendLocalPunch(id:string, punch:Punch){
+  const key = K.punchesPrefix + id;
+  const arr = await get<Punch[]>(key, []);
   arr.push(punch);
-  await AsyncStorage.setItem(key, JSON.stringify(arr));
+  await set(key, arr);
 }
-export async function loadLocalPunches(empNo: string | number): Promise<any[]> {
-  const key = keyPunches(empNo);
-  const raw = (await AsyncStorage.getItem(key)) ?? '[]';
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
+export async function loadLocalPunches(id:string){ return await get<Punch[]>(K.punchesPrefix+id, []); }
 
-/** ===== Projects & Media ===== */
-export type Project = {
-  id: number;
-  employerNo: number;
-  name: string;
-  location: string; // היה city
-  createdAt: string;
-};
-
-export type ProjectMedia = {
-  id: string;
-  type: 'image' | 'video' | 'file';
-  uri: string;
-  addedAt: string;
-};
-
-const keyNextProjectId = (employerNo: string | number) => k(`employer:${employerNo}:next_project_id`);
-const keyProjects = (employerNo: string | number) => k(`employer:${employerNo}:projects`);
-const keyProjectMedia = (employerNo: string | number, projectId: number) =>
-  k(`employer:${employerNo}:project:${projectId}:media`);
-
-async function getNextProjectId(employerNo: string | number): Promise<number> {
-  const raw = await AsyncStorage.getItem(keyNextProjectId(employerNo));
-  const current = raw ? parseInt(raw, 10) : 1;
-  const next = isNaN(current) ? 2 : current + 1;
-  await AsyncStorage.setItem(keyNextProjectId(employerNo), String(next));
-  return current;
-}
-
-export async function createProject(employerNo: string | number, name: string, location: string): Promise<Project> {
-  const id = await getNextProjectId(employerNo);
-  const p: Project = {
-    id,
-    employerNo: Number(employerNo),
-    name,
-    location,
-    createdAt: new Date().toISOString(),
-  };
-  const raw = (await AsyncStorage.getItem(keyProjects(employerNo))) ?? '[]';
-  const arr: Project[] = JSON.parse(raw);
-  arr.push(p);
-  await AsyncStorage.setItem(keyProjects(employerNo), JSON.stringify(arr));
-  await AsyncStorage.setItem(keyProjectMedia(employerNo, id), JSON.stringify([]));
+// ===== Projects & media
+export async function createProject(employerNoStr:string, name:string, location:string){
+  const employerNo = Number(employerNoStr);
+  const projects = await get<Project[]>(K.projects, []);
+  const id = (projects.reduce((m,p)=>Math.max(m,p.id), 0) || 0) + 1;
+  const p: Project = { id, employerNo, name, location, createdAt: new Date().toISOString() };
+  projects.push(p);
+  await set(K.projects, projects);
   return p;
 }
-
-export async function listProjects(employerNo: string | number): Promise<Project[]> {
-  const raw = (await AsyncStorage.getItem(keyProjects(employerNo))) ?? '[]';
-  const arr: any[] = JSON.parse(raw);
-  // תמיכה לאחור: אם נשמר city בעבר – נמפה ל-location
-  const mapped: Project[] = arr.map((p) => ({
-    id: p.id,
-    employerNo: Number(p.employerNo),
-    name: p.name,
-    location: p.location ?? p.city ?? '',
-    createdAt: p.createdAt,
-  }));
-  return mapped.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+export async function listProjects(employerNoStr:string){
+  const employerNo = Number(employerNoStr);
+  const projects = await get<Project[]>(K.projects, []);
+  // Newest first by createdAt, then by id (desc) to break ties
+  return projects
+    .filter(p => p.employerNo === employerNo)
+    .sort((a,b) => b.createdAt.localeCompare(a.createdAt) || (b.id - a.id));
 }
 
-export async function getProject(employerNo: string | number, projectId: number): Promise<Project | null> {
-  const items = await listProjects(employerNo);
-  return items.find(p => p.id === projectId) ?? null;
-}
-
-export async function listProjectMedia(employerNo: string | number, projectId: number): Promise<ProjectMedia[]> {
-  const raw = (await AsyncStorage.getItem(keyProjectMedia(employerNo, projectId))) ?? '[]';
-  return JSON.parse(raw);
-}
-
-export async function addProjectMedia(
-  employerNo: string | number,
-  projectId: number,
-  item: Omit<ProjectMedia, 'addedAt'>
-) {
-  const arr = await listProjectMedia(employerNo, projectId);
-  arr.push({ ...item, addedAt: new Date().toISOString() });
-  await AsyncStorage.setItem(keyProjectMedia(employerNo, projectId), JSON.stringify(arr));
-}
-
-export async function removeProjectMedia(
-  employerNo: string | number,
-  projectId: number,
-  ids: string[]
-) {
-  const arr = await listProjectMedia(employerNo, projectId);
-  const filtered = arr.filter(m => !ids.includes(m.id));
-  await AsyncStorage.setItem(keyProjectMedia(employerNo, projectId), JSON.stringify(filtered));
-}
+// Media helpers (placeholders if you need later)
+export async function listProjectMedia(projectId:number){ return await get<Media[]>(K.mediaPrefix+projectId, []); }
+export async function addProjectMedia(projectId:number, media:Media){ const key=K.mediaPrefix+projectId; const arr=await get<Media[]>(key, []); arr.push(media); await set(key, arr); }
+export async function removeProjectMedia(projectId:number, ids:string[]){ const key=K.mediaPrefix+projectId; const arr=await get<Media[]>(key, []); await set(key, arr.filter(m=>!ids.includes(m.id))); }

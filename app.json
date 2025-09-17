@@ -8,17 +8,14 @@
     "scheme": "worklogmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "The app uses your location to verify on-site clock-in/out.",
-        "NSCameraUsageDescription": "The app uses the camera to capture photos/videos for project media.",
-        "NSPhotoLibraryUsageDescription": "The app needs access to your photo library to pick images and videos for projects.",
-        "NSPhotoLibraryAddUsageDescription": "The app may save captured media to your photo library."
+        "NSCameraUsageDescription": "The app uses your camera to capture project photos and videos.",
+        "NSPhotoLibraryUsageDescription": "The app needs access to your photo library to attach media to projects."
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -32,17 +29,14 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "CAMERA",
-        "READ_MEDIA_IMAGES",
-        "READ_MEDIA_VIDEO",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ]
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -63,9 +57,9 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-document-picker"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
