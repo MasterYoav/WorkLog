@@ -1,3 +1,5 @@
+![WorkLog Logo](./assets/logo.png)
+
 # WorkLog Mobile
 
 📱 Cross-platform mobile app (React Native + Expo) for employers and workers to track work hours, projects, and attendance.  
@@ -62,3 +64,103 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 
 # For CI tests only (not bundled into the app)
 SUPABASE_SERVICE_ROLE_KEY="service-role-key"
+```
+
+- Local dev: `.env.test.local`  
+- CI: GitHub Actions secrets → EAS env variables  
+- **Never commit real keys** 🚫
+
+---
+
+## 🧪 Testing
+
+Run coverage tests:
+
+```bash
+npm run test:cov
+```
+
+- Integration tests run against a **Supabase CI database**  
+- Local media tests run against Expo FileSystem sandbox  
+- Coverage currently ~80%+
+
+---
+
+## 📂 Project Structure
+
+```
+WorkLog-mobile/
+├── app/                # Screens (expo-router)
+│   ├── _layout.tsx
+│   ├── auth.tsx
+│   ├── employer-home.tsx
+│   ├── employer-project.tsx
+│   └── worker-home.tsx
+├── components/         # Shared UI components
+│   └── WLLogo.tsx
+├── src/
+│   ├── data/
+│   │   └── repo.ts     # Supabase + offline repo logic
+│   ├── lib/
+│   │   ├── storage.ts  # Local-only data
+│   │   ├── location.ts # GPS + geocode helpers
+│   │   └── supabase.ts # Supabase client
+├── __tests__/          # Jest tests
+├── assets/
+│   └── logo.png
+├── .env.test.local     # Local test env
+└── README.md
+```
+
+---
+
+## 🚀 Running Locally
+
+1. Install deps  
+   ```bash
+   npm install
+   ```
+
+2. Set up environment  
+   ```bash
+   cp .env.test.local .env
+   ```
+
+3. Start dev server  
+   ```bash
+   npx expo start
+   ```
+
+4. Run tests  
+   ```bash
+   npm run test:cov
+   ```
+
+---
+
+## 📦 Building (EAS)
+
+Make sure you have an Expo account and EAS CLI:
+
+```bash
+eas build --platform ios
+eas build --platform android
+```
+
+Secrets are managed in Expo → Project → Secrets.
+
+---
+
+## ✅ Recent Changes
+
+- Added **WLLogo** reusable component → logo now **larger across the app**  
+- Enforced **unique employer & worker IDs** (no duplicates)  
+- Fixed **Supabase CI schema setup** for tests  
+- Improved **offline queue sync** logic  
+- Strengthened **dark mode UI** consistency  
+
+---
+
+## 📝 License
+
+MIT
