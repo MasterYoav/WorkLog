@@ -19,24 +19,5 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: WorkLog-mobile/package-lock.json
-
-      - name: Install deps
-        run: npm ci
-
-      # If you set secrets on the *Environment* named "ci-integration",
-      # GitHub exposes them as ${{ secrets.* }} inside the job.
-      - name: Inject CI secrets into env
-        run: |
-          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.CI_SUPABASE_URL }}" >> $GITHUB_ENV
-          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.CI_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.CI_SUPABASE_SERVICE_ROLE_KEY }}" >> $GITHUB_ENV
-
       - name: Run tests with coverage
         run: npm run test:cov
