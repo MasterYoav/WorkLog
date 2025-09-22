@@ -26,11 +26,19 @@ async function set<T>(key:string, val:T): Promise<void> {
 function nextId(x:number){ return (x||0)+1; }
 function randomPassword(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join(''); }
 
-// ===== Employers
+// ===== Employers (UPDATED)
 export async function registerEmployer(name:string, password:string, email:string){
   const employers = await get<Employer[]>(K.employers, []);
+  // Enforce unique email
+  if (email && employers.some(e => e.email?.toLowerCase() === email.toLowerCase())) {
+    throw new Error('קיים כבר מעסיק עם אימייל זה');
+  }
+
+  // Robust next id: max(existing, seq) + 1
   const seq = await get<number>(K.seqEmployer, 1000);
-  const employerNo = nextId(seq);
+  const maxExisting = employers.reduce((m, e) => Math.max(m, e.employerNo), 0);
+  const employerNo = Math.max(seq, maxExisting) + 1;
+
   const emp: Employer = { employerNo, name, password, email, createdAt: new Date().toISOString() };
   employers.push(emp);
   await set(K.employers, employers);
@@ -67,15 +75,23 @@ export async function changeEmployerPassword(employerNoStr:string, oldPass:strin
   await set(K.employers, employers);
 }
 
-// ===== Workers
+// ===== Workers (UPDATED)
 export async function registerEmployee(fullName:string, tz:string, password:string, employerNoStr:string){
   const workers = await get<Worker[]>(K.workers, []);
   const employers = await get<Employer[]>(K.employers, []);
   const employerNo = Number(employerNoStr);
   if (!employers.find(e => e.employerNo === employerNo)) throw new Error('מספר מעסיק לא קיים');
 
+  // Enforce unique TZ per employer (prevents duplicate "ID" within same company)
+  if (workers.some(w => w.employerNo === employerNo && w.tz === tz)) {
+    throw new Error('כבר קיים עובד עם תעודת זהות זו אצל המעסיק');
+  }
+
+  // Robust next id: max(existing, seq) + 1
   const seq = await get<number>(K.seqWorker, 5000);
-  const empNo = nextId(seq);
+  const maxExisting = workers.reduce((m, w) => Math.max(m, w.empNo), 0);
+  const empNo = Math.max(seq, maxExisting) + 1;
+
   const w: Worker = { empNo, fullName, tz, password, employerNo, createdAt: new Date().toISOString() };
   workers.push(w);
   await set(K.workers, workers);

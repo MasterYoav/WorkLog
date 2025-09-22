@@ -1,29 +1,16 @@
 // src/data/repo.ts
-//
-// Data layer:
-// - Cloud (Supabase) עבור פרויקטים/נוכחות (כפי שהיה)
-// - מדיה של פרויקטים: שמירה מקומית בלבד בתוך sandbox של האפליקציה
-// - מראה לוקאלי + תור אופליין לפעולות ענן (ללא מדיה)
-//
-// דרישות חבילות:
-//   @supabase/supabase-js  (אם משתמשים בענן לפרויקטים/נוכחות)
-//   expo-file-system
-//   base-64  (כבר לא בשימוש במדיה המקומית, נשאר אם מימשת בעבר)
-//
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 const FS = FileSystem as any;
 
 import {
-    addProjectMedia,
-    appendLocalPunch,
-    createProject as createProjectLocal,
-    listProjectMedia,
-    listProjects as listProjectsLocal,
-    Project,
-    removeProjectMedia,
+  addProjectMedia,
+  appendLocalPunch,
+  createProject as createProjectLocal,
+  listProjectMedia,
+  listProjects as listProjectsLocal,
+  Project
 } from '../lib/storage';
 
 // ---------- Types ----------
@@ -67,14 +54,14 @@ type ProjectRow = {
 };
 
 export type ProjectMediaRow = {
-  id?: string; // uuid (בענן) — לא בשימוש כרגע
+  id?: string; // uuid (ענן) — לא בשימוש כרגע
   project_id: number;
   file_path: string; // נתיב קובץ מקומי (sandbox)
   mime?: string | null;
   created_at?: string;
 };
 
-// ---------- Offline queue (לענן בלבד, לא למדיה) ----------
+// ---------- Offline queue ----------
 type PendingOp =
   | { id: string; table: 'punches'; payload: PunchRow }
   | { id: string; table: 'projects'; payload: ProjectRow };
@@ -91,7 +78,6 @@ async function savePending(list: PendingOp[]) {
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
-
 async function cloudInsert<T extends object>(table: string, payload: T): Promise<void> {
   const { error } = await supabase.from(table).insert(payload as any);
   if (error) throw error;
@@ -114,7 +100,7 @@ export async function flushPending(): Promise<{ ok: number; failed: number }> {
   return { ok, failed: next.length };
 }
 
-// ---------- Auth (ענן) ----------
+// ---------- Auth (cloud) ----------
 export async function cloudLoginEmployer(employerNo: number, password: string): Promise<EmployerRow> {
   const { data, error } = await supabase.from('employers').select('*').eq('employer_no', employerNo).maybeSingle();
   if (error) throw error;
@@ -191,7 +177,7 @@ export async function recordPunchWorker(empNo: number, input: PunchInput) {
     ts: input.ts,
     lat: input.lat ?? 0,
     lng: input.lng ?? 0,
-    acc: input.accuracy,
+    acc: input.accuracy ?? undefined,
     address_label: input.address_label,
     started_at: input.started_at ?? undefined,
     duration_ms: input.duration_ms,
@@ -225,14 +211,14 @@ export async function recordPunchEmployer(employerNo: number, input: PunchInput)
     ts: input.ts,
     lat: input.lat ?? 0,
     lng: input.lng ?? 0,
-    acc: input.accuracy,
+    acc: input.accuracy ?? undefined,
     address_label: input.address_label,
     started_at: input.started_at ?? undefined,
     duration_ms: input.duration_ms,
   });
 }
 
-// ---------- Projects (ענן עם נפילה ללוקאל) ----------
+// ---------- Projects (cloud-first, local fallback) ----------
 export async function createProjectCloud(employerNo: number, name: string, location: string): Promise<ProjectRow> {
   const payload: ProjectRow = { employer_no: employerNo, name, location };
   try {
@@ -257,7 +243,7 @@ export async function listProjectsCloudFirst(employerNo: number): Promise<Projec
       .eq('employer_no', employerNo)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data ?? []).map(p => ({
+    return (data ?? []).map((p) => ({
       id: p.id!,
       employerNo: p.employer_no,
       name: p.name,
@@ -270,17 +256,11 @@ export async function listProjectsCloudFirst(employerNo: number): Promise<Projec
 }
 
 // ---------- Project media — LOCAL-ONLY ----------
-//
-// מבצע העתקה של קובץ/תמונה/וידאו לתיקיית Documents של האפליקציה,
-// בתוך projects/<projectId>/filename, ומוסיף רשומת מדיה ל-AsyncStorage.
-//
-
-// LOCAL media root (safe for TS + runtime)
 const MEDIA_ROOT: string = `${(FS.documentDirectory || FS.cacheDirectory || '')}projects/`;
 
 function ensureExt(name?: string, fallbackExt?: string) {
   if (!name) return fallbackExt ? `file${fallbackExt}` : `file`;
-  return /\.[a-z0-9]+$/i.test(name) ? name : (fallbackExt ? `${name}${fallbackExt}` : name);
+  return /\.[a-z0-9]+$/i.test(name) ? name : fallbackExt ? `${name}${fallbackExt}` : name;
 }
 function guessExtByMime(mime?: string) {
   if (!mime) return '';
@@ -310,7 +290,7 @@ export async function saveProjectMediaFromUri(
   await FileSystem.copyAsync({ from: sourceUri, to: dest });
 
   await addProjectMedia(projectId, {
-    id: dest, // משתמשים בנתיב כ-id ייחודי
+    id: dest, // use absolute path as unique id
     uri: dest,
     type: mime?.startsWith('video/') ? 'video' : mime?.startsWith('image/') ? 'image' : 'file',
     name: safeName,
@@ -324,11 +304,106 @@ export async function listProjectMediaLocal(projectId: number) {
   return await listProjectMedia(projectId);
 }
 
-export async function deleteProjectMediaLocal(projectId: number, mediaIds: string[]) {
-  // מחיקת קבצים עצמם
-  for (const id of mediaIds) {
-    try { await FileSystem.deleteAsync(id, { idempotent: true }); } catch {}
+/**
+ * Local media delete (authoritative write to the right key):
+ * - Loads current media from "media:<projectId>"
+ * - Filters out any record whose id/uri/file_path matches inputs
+ * - Writes the filtered list back to "media:<projectId>"
+ * - Best-effort deletes files from disk (ignores missing)
+ * - Returns the remaining count
+ */
+export async function deleteProjectMediaLocal(projectId: number, filePathsOrIds: string[]) {
+  const toDelete = new Set(filePathsOrIds);
+
+  // 1) Read current
+  const current = await listProjectMedia(projectId);
+
+  // 2) Filter out anything matching id OR uri (both are the absolute path in your impl)
+  const keep = (current as any[]).filter(
+    (m) => !(toDelete.has(m.id) || toDelete.has(m.uri) || toDelete.has(m.file_path))
+  );
+
+  // 3) Persist to the *correct* key: "media:<projectId>"
+  const key = `media:${projectId}`;
+  await AsyncStorage.setItem(key, JSON.stringify(keep));
+
+  // 4) Try to delete files (ignore errors / missing)
+  for (const p of filePathsOrIds) {
+    try {
+      // @ts-ignore (older SDKs don't type idempotent)
+      await FileSystem.deleteAsync(p, { idempotent: true });
+    } catch {
+      /* ignore */
+    }
   }
-  // מחיקת הרשומות מה-AsyncStorage
-  await removeProjectMedia(projectId, mediaIds);
+
+  // 5) Return remaining count
+  return keep.length;
 }
+// === BEGIN: Workers monthly totals helpers ===
+import { listEmployerWorkers, loadLocalPunches } from '../lib/storage';
+
+/**
+ * Return [start,end) range for a given year+month (UTC-safe).
+ */
+export function monthStartEnd(year: number, month0: number) {
+  const start = new Date(Date.UTC(year, month0, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month0 + 1, 1, 0, 0, 0, 0));
+  return { startIso: start.toISOString(), endIso: end.toISOString(), start, end };
+}
+
+/**
+ * Label like "September 2025".
+ */
+export function monthRangeLabel(year: number, month0: number) {
+  return new Date(year, month0, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+}
+
+/**
+ * Format ms → "HH:MM"
+ */
+export function formatHm(ms: number) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Sum total worked ms for a single worker (from LOCAL punches)
+ * in [monthStart, monthEnd). Uses 'out' punches' duration_ms.
+ */
+export async function getWorkerMonthlyTotalMs(workerEmpNo: number, year: number, month0: number) {
+  const { startIso, endIso } = monthStartEnd(year, month0);
+  const punches = await loadLocalPunches(String(workerEmpNo));
+  if (!punches || punches.length === 0) return 0;
+
+  let total = 0;
+  for (const p of punches) {
+    // We count OUT punches only (they should contain duration_ms).
+    if (p.kind !== 'out') continue;
+    if (!p.ts) continue;
+    if (p.ts >= startIso && p.ts < endIso) {
+      total += Math.max(0, p.duration_ms ?? 0);
+    }
+  }
+  return total;
+}
+
+/**
+ * For an employer, list workers + their total for the given month (LOCAL).
+ * Sorted by worker creation time (oldest→newest) as per your listEmployerWorkers.
+ */
+export async function listWorkersWithMonthlyTotals(
+  employerNo: number,
+  year: number,
+  month0: number
+): Promise<Array<{ empNo: number; fullName: string; totalMs: number }>> {
+  const workers = await listEmployerWorkers(String(employerNo));
+  const rows: Array<{ empNo: number; fullName: string; totalMs: number }> = [];
+  for (const w of workers) {
+    const totalMs = await getWorkerMonthlyTotalMs(w.empNo, year, month0);
+    rows.push({ empNo: w.empNo, fullName: w.fullName, totalMs });
+  }
+  return rows;
+}
+// === END: Workers monthly totals helpers ===

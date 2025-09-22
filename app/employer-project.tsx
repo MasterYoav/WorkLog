@@ -1,3 +1,4 @@
+import WLLogo from '@/components/WLLogo';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -5,7 +6,6 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   useColorScheme,
@@ -137,7 +137,7 @@ export default function EmployerProjectScreen() {
         }}
       >
         {item.type === 'image' ? (
-          <Image source={{ uri: item.uri }} style={{ width: '100%', height: 120, borderRadius: 8 }} />
+          <WLLogo /> 
         ) : (
           <View style={{ alignItems: 'center', justifyContent: 'center', height: 120 }}>
             <Text style={[{ fontSize: 40 }, text]}>{item.type === 'video' ? '🎬' : '📄'}</Text>
@@ -159,7 +159,7 @@ export default function EmployerProjectScreen() {
           <TouchableOpacity onPress={() => router.replace({ pathname: '/employer-home', params: { employerNo } })}>
             <Text style={[{ textDecorationLine: 'underline', fontWeight: '700' }, text]}>חזרה</Text>
           </TouchableOpacity>
-          <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40, resizeMode: 'contain' }} />
+            <WLLogo /> 
           {selectMode ? (
             <TouchableOpacity onPress={removeSelected}>
               <Text style={[{ textDecorationLine: 'underline', fontWeight: '700' }, text]}>מחק נבחרים</Text>

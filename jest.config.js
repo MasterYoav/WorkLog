@@ -6,6 +6,7 @@ module.exports = {
     transformIgnorePatterns: [
       'node_modules/(?!(jest-)?react-native|expo(nent)?|@expo(nent)?/.*|@react-native/.*)',
     ],
+    setupFiles: ['<rootDir>/jest.setup.ts'],
     collectCoverageFrom: [
       'src/**/*.{ts,tsx}',
       '!src/**/__mocks__/**',

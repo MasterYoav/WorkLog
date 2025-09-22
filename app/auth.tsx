@@ -1,13 +1,14 @@
+import WLLogo from '@/components/WLLogo';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
   Button,
-  Image, KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform,
   Text, TextInput,
   TouchableOpacity,
   useColorScheme,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loginEmployee, registerEmployee, resetPasswordToTz } from '../src/lib/storage';
@@ -76,7 +77,7 @@ export default function EmployeeAuthScreen() {
 
         {/* לוגו באמצע */}
         <View style={{ alignItems: 'center', marginTop: 12 }}>
-          <Image source={require('../assets/logo.png')} style={{ width: 220, height: 72, resizeMode: 'contain' }} />
+          <WLLogo /> 
         </View>
 
         {/* תוכן ממורכז אנכית */}

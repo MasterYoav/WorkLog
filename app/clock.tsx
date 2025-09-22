@@ -1,6 +1,7 @@
+import WLLogo from '@/components/WLLogo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatAddress, getCurrentLocation, haversineMeters, requestForegroundLocation, reverseGeocode } from '../src/lib/location';
 import { appendLocalPunch, clearShiftStart, loadShiftStart, saveShiftStart } from '../src/lib/storage';
@@ -85,7 +86,7 @@ export default function ClockScreen(){
       <View style={{ paddingHorizontal:16 }}>
         {/* Header */}
         <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginTop:8, marginBottom:12 }}>
-          <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40, resizeMode:'contain' }} />
+          <WLLogo /> 
           <TouchableOpacity onPress={()=>router.replace('/auth')}><Text style={[{ textDecorationLine:'underline', fontWeight:'700' }, text]}>יציאה</Text></TouchableOpacity>
         </View>
 

@@ -13,8 +13,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "The app uses your location to verify on-site clock-in/out.",
         "NSCameraUsageDescription": "The app uses your camera to capture project photos and videos.",
-        "NSPhotoLibraryUsageDescription": "The app needs access to your photo library to attach media to projects."
-      }
+        "NSPhotoLibraryUsageDescription": "The app needs access to your photo library to attach media to projects.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.masteryoav.WorkLogmobile"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,11 +28,12 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -63,6 +66,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "007f7a5d-3ce2-4f3c-95f2-be2e1a5a4ff8"
+      }
+    },
+    "owner": "masteryoav"
   }
 }

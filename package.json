@@ -10,7 +10,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "test:unit": "jest --coverage --testPathIgnorePatterns=/repo\\.integration\\.supabase\\.test\\.ts$/",
+    "test:integration": "jest __tests__/repo.integration.supabase.test.ts --runInBand"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
