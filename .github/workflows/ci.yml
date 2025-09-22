@@ -19,5 +19,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run tests with coverage
-        run: npm run test:cov
+      - name: Run tests
+        env:
+          CI: true
+        run: npm test -- --ci
