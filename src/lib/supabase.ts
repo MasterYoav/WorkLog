@@ -1,14 +1,9 @@
-// src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
-import Constants from 'expo-constants';
 
-const extra = Constants.expoConfig?.extra ?? {};
-const SUPABASE_URL = extra.EXPO_PUBLIC_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON = extra.EXPO_PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+const url  = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON) {
-  // Helpful message at runtime if env missing
-  throw new Error('Supabase env missing: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
-}
+// 🔎 לוג קצר שיעלה בכל פתיחה של האפליקציה
+console.log('[Supabase]', { url: url?.slice(0, 30) ?? 'MISSING', anon: anon ? 'OK' : 'MISSING' });
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+export const supabase = createClient(url!, anon!);

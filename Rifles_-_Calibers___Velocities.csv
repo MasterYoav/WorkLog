@@ -1,0 +1,11 @@
+Name,Model,Caliber,Muzzle Velocity (m/s),Notes
+AK-47 (Type 1),AK-47,7.62×39mm,715,"Reliable, intermediate cartridge"
+SKS,SKS,7.62×39mm,740,Semi-auto carbine
+AR-15 (M4 style),M4/AR-15,5.56×45mm NATO,920,Common modern service round
+HK416,HK416,5.56×45mm NATO,920,Piston-driven AR variant
+Remington 700 (.308),Remington 700,.308 Winchester (7.62×51mm NATO),820,Bolt-action sniper/hunting
+M14,M14,7.62×51mm NATO,853,Battle rifle / designated marksman
+Dragunov SVD,SVD Dragunov,7.62×54mmR,830,Semi-auto designated marksman rifle
+Mosin–Nagant,Mosin–Nagant M1891,7.62×54mmR,853,Historic bolt-action rifle
+FN SCAR-H,SCAR-H (Mk 17),7.62×51mm NATO,790,Modular battle rifle
+Barrett M82,M82,.50 BMG (12.7×99mm),850,Anti-material / long-range sniper rifle

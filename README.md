@@ -2,87 +2,78 @@
 
 # WorkLog Mobile
 
-📱 Cross-platform mobile app (React Native + Expo) for employers and workers to track work hours, projects, and attendance.  
-Backend powered by **Supabase**.  
-Supports **offline mode**, **local storage with AsyncStorage**, and **media saved locally in the app sandbox**.
+📱 Cross-platform mobile app (React Native + Expo) for **employers and workers** to track work hours, manage projects, and handle attendance — all powered by **Supabase**.  
+🎉 Version **1.0** – Official Release  
+
+Data (employers, workers, projects, punches) is synced with Supabase, while media files are stored locally on the device sandbox.
 
 ---
 
-## ✨ Features
+## ✨ Features (v1.0)
 
-- **Employer & Worker accounts**
-  - Secure login & password management  
-  - Unique IDs per user (no duplicate employers/workers allowed) ✅
+### 👥 Employer & Worker Accounts
+- Separate **sign-in and registration** for employers and workers  
+- Automatic employer ID assignment (`employer_no`)  
+- Worker registration linked to an existing employer  
+- Password reset flow with clipboard copy  
+- Prevents duplicate IDs in the cloud (unique per table)
 
-- **Attendance clock**
-  - Punch **in/out** with real GPS validation (haversine distance check, accuracy filter)  
-  - Shift duration tracking in real time  
-  - Offline punches are queued and synced later
+### 🕒 Attendance Clock
+- Employers can punch **in/out from anywhere** (location always logged)  
+- Real-time shift timer display  
+- Stored in Supabase table `punches` via RPC calls  
+- Location accuracy + haversine validation  
+- Offline punches queued and synced automatically
 
-- **Projects**
-  - Employers can create and manage projects  
-  - Projects stored in Supabase (with local fallback)  
-  - Media (photos, videos, files) saved locally per project
+### 👷 Worker Management
+- View all workers and their total hours (calculated server-side)  
+- Each worker has an individual **attendance policy**:
+  - “From workplace only” (default)
+  - “From anywhere”
+- Policy changes update instantly in Supabase (`workers.punch_mode`)
+- Floating “Monthly Summary” button on workers page
 
-- **Workers**
-  - Employers can see all workers and their total hours  
-  - Sorted by seniority
+### 🧱 Projects
+- Employers can **create / view / delete** projects  
+- Stored in Supabase (`projects` table)  
+- Local fallback with offline cache  
+- Add media (photos, videos, files) — saved locally, not in the cloud  
+- Project details open in a centered modal card  
+- Delete confirmation dialog with Supabase policy check
 
-- **Personal totals**
-  - Monthly summary per employer  
-  - Worker total hours across all time
-
-- **Dark mode support**
-  - Auto-adapted using `useColorScheme`  
-  - Panels and text styled for light/dark themes
-
-- **Bigger app logo**
-  - Central reusable component `WLLogo` in `components/`  
-  - Easy to resize globally or per screen
+### 🌓 Theming
+- Auto light/dark mode using `useColorScheme`  
+- Manual theme toggle (☀️ / 🌙) on login screen and personal info page  
+- All buttons styled consistently:
+  - 🟢 Green → main action (login / clock in)  
+  - 🔵 Blue → secondary actions (register / update)  
+  - 🔴 Red → destructive (delete / logout)
 
 ---
 
 ## 🏗️ Tech Stack
 
-- [Expo](https://expo.dev) (React Native runtime)
-- [expo-router](https://expo.github.io/router/docs)
-- [Supabase](https://supabase.com) (Postgres + auth + API)
-- AsyncStorage for offline/local data
-- Jest + jest-expo for testing
-- TypeScript for type safety
+- **Expo** (React Native runtime)  
+- **expo-router** for file-based navigation  
+- **Supabase** for backend (Postgres + RLS + RPC)  
+- **AsyncStorage** for offline/local data  
+- **expo-file-system** for local project media  
+- **expo-clipboard** for password recovery  
+- **TypeScript** for full type safety  
 
 ---
 
 ## 🔑 Environment Variables
 
-All secrets are **kept outside the repo**.  
-Create `.env` files (or use EAS Secrets in CI/CD):
+Create a `.env` file at the root (never commit real keys):
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL="https://xxxx.supabase.co"
 EXPO_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
-
-# For CI tests only (not bundled into the app)
-SUPABASE_SERVICE_ROLE_KEY="service-role-key"
 ```
 
-- Local dev: `.env.test.local`  
-- CI: GitHub Actions secrets → EAS env variables  
-- **Never commit real keys** 🚫
-
----
-
-## 🧪 Testing
-
-Run coverage tests:
-
-```bash
-npm run test:cov
-```
-
-- Integration tests run against a **Supabase CI database**  
-- Local media tests run against Expo FileSystem sandbox  
-- Coverage currently ~80%+
+For CI/CD (EAS build):  
+Use **Expo Secrets** or GitHub Actions secrets to inject these values securely.
 
 ---
 
@@ -90,25 +81,24 @@ npm run test:cov
 
 ```
 WorkLog-mobile/
-├── app/                # Screens (expo-router)
-│   ├── _layout.tsx
-│   ├── auth.tsx
-│   ├── employer-home.tsx
-│   ├── employer-project.tsx
-│   └── worker-home.tsx
-├── components/         # Shared UI components
-│   └── WLLogo.tsx
+├── app/
+│   ├── _layout.tsx              # Root layout (theme, router)
+│   ├── auth.tsx                 # Worker login & registration
+│   ├── employer-auth.tsx        # Employer login, registration, password reset
+│   ├── employer-home.tsx        # Main employer panel (menu, clock, workers, projects)
+│   ├── employer-project.tsx     # Project modal view + file/media upload + delete
+│   └── employer-workers.tsx     # Monthly summary per worker
+├── components/
+│   └── WLLogo.tsx               # Reusable large logo component
 ├── src/
 │   ├── data/
-│   │   └── repo.ts     # Supabase + offline repo logic
+│   │   └── repo.ts              # Supabase & offline repository logic
 │   ├── lib/
-│   │   ├── storage.ts  # Local-only data
-│   │   ├── location.ts # GPS + geocode helpers
-│   │   └── supabase.ts # Supabase client
-├── __tests__/          # Jest tests
+│   │   ├── supabase.ts          # Supabase client
+│   │   ├── location.ts          # GPS + geocode helpers
+│   │   └── storage.ts           # Local storage for media
 ├── assets/
 │   └── logo.png
-├── .env.test.local     # Local test env
 └── README.md
 ```
 
@@ -116,22 +106,22 @@ WorkLog-mobile/
 
 ## 🚀 Running Locally
 
-1. Install deps  
+1. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Set up environment  
+2. **Configure environment**
    ```bash
    cp .env.test.local .env
    ```
 
-3. Start dev server  
+3. **Start development server**
    ```bash
    npx expo start
    ```
 
-4. Run tests  
+4. **Run tests**
    ```bash
    npm run test:cov
    ```
@@ -140,27 +130,82 @@ WorkLog-mobile/
 
 ## 📦 Building (EAS)
 
-Make sure you have an Expo account and EAS CLI:
-
 ```bash
 eas build --platform ios
 eas build --platform android
 ```
 
-Secrets are managed in Expo → Project → Secrets.
+Secrets are managed via **Expo → Project → Secrets**.  
+Ensure your `.env` is not committed to git.
 
 ---
 
-## ✅ Recent Changes
+## 🧩 Supabase Setup Notes
 
-- Added **WLLogo** reusable component → logo now **larger across the app**  
-- Enforced **unique employer & worker IDs** (no duplicates)  
-- Fixed **Supabase CI schema setup** for tests  
-- Improved **offline queue sync** logic  
-- Strengthened **dark mode UI** consistency  
+To allow deleting projects directly from the app, make sure you add this policy:
+
+```sql
+alter table public.projects enable row level security;
+
+drop policy if exists projects_delete_all on public.projects;
+
+create policy projects_delete_all
+on public.projects
+for delete
+using (true);
+```
+
+If you prefer owner-based deletion:
+```sql
+create policy projects_delete_own
+on public.projects
+for delete
+using (auth.role() = 'authenticated' OR true)
+with check (true);
+```
+
+---
+
+## 🧪 Testing Checklist (before release)
+
+✅ Register employer → verify appears in Supabase  
+✅ Register worker → verify linked employer_no  
+✅ Change punch policy → test from worker app  
+✅ Clock-in/out → validate GPS stored  
+✅ Create project → verify in DB  
+✅ Delete project → ensure removed after SQL policy  
+✅ Light/dark toggle → persists correctly  
+✅ Logout → returns to login screen
+
+---
+
+## 📱 Running on Android (Mac)
+
+If Android Studio emulator fails to connect:
+
+### Option 1 – Expo Go on real Android phone
+1. Install **Expo Go** from Play Store.  
+2. Run `npx expo start` on your Mac.  
+3. Scan the QR code with the Android device (same Wi-Fi).  
+✅ Easiest and most reliable.
+
+### Option 2 – Android Emulator
+- Open AVD from Android Studio (API 33+).  
+- In the Expo CLI window press:
+  ```bash
+  a
+  ```
+- If bundler not loading, run:
+  ```bash
+  adb reverse tcp:8081 tcp:8081
+  ```
+  or start Expo in tunnel mode:
+  ```bash
+  npx expo start --tunnel
+  ```
 
 ---
 
 ## 📝 License
 
-MIT
+MIT © 2025 WorkLog Team
