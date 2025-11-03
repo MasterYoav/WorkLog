@@ -1,29 +1,52 @@
-// app.config.ts
 import 'dotenv/config';
+import { ExpoConfig } from 'expo';
 
-export default {
-  expo: {
-    name: 'WorkLog-mobile',
-    slug: 'WorkLog-mobile',
-    version: '1.0.0',
-    scheme: 'worklogmobile',
-    newArchEnabled: true,
-    ios: { "bundleIdentifier": "com.yoavperetz.worklog",supportsTablet: true },
-    android: { "package": "com.yoavperetz.worklog", "versionCode": 1, permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'] },
-    plugins: [
-      'expo-router',
-      ['expo-splash-screen', { backgroundColor: '#ffffff', dark: { backgroundColor: '#000000' } }],
-      ['expo-location', { isAndroidBackgroundLocationEnabled: false }],
-    ],
-    experiments: { typedRoutes: true, reactCompiler: true },
-
-    // 👇 expose env as "extra" (safe for public `EXPO_PUBLIC_` values)
-    extra: {
-      eas: {
-        projectId: '007f7a5d-3ce2-4f3c-95f2-be2e1a5a4ff8',
-      },
-      EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+const config: ExpoConfig = {
+  name: 'WorkLog',
+  slug: 'WorkLog-mobile',
+  scheme: 'worklog',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/logo.png',
+  userInterfaceStyle: 'automatic',
+  platforms: ['ios', 'android'],
+  splash: {
+    image: './assets/logo.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ffffff',
+  },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: 'com.masteryoav.worklog',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
+  android: {
+    package: 'com.masteryoav.worklog',
+    adaptiveIcon: {
+      foregroundImage: './assets/logo.png',
+      backgroundColor: '#ffffff',
+    },
+  },
+  extra: {
+    eas: {
+      projectId: '007f7a5d-3ce2-4f3c-95f2-be2e1a5a4ff8',
+    },
+    // pulled from .env at runtime
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  },
+  experiments: {
+    typedRoutes: true,
+  },
+  plugins: [
+    // we DO use expo-router:
+    'expo-router',
+    // 🚫 DO NOT put 'expo-clipboard' here – it has no config plugin in this version
+    // 'expo-clipboard',
+    // 'expo-mail-composer' also usually not needed as a plugin
+  ],
 };
+
+export default config;
