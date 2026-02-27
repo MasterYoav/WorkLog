@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { hashPassword, passwordMatches, sanitizeEmail, sanitizeNumericText, sanitizeText } from './security';
 
 export type Employer = { employerNo: number; name: string; password: string; email: string; createdAt: string; };
 export type Worker = { empNo: number; fullName: string; tz: string; password: string; employerNo: number; createdAt: string; };
@@ -29,17 +30,18 @@ function randomPassword(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijk
 // ===== Employers (UPDATED)
 export async function registerEmployer(name:string, password:string, email:string){
   const employers = await get<Employer[]>(K.employers, []);
-  // Enforce unique email
-  if (email && employers.some(e => e.email?.toLowerCase() === email.toLowerCase())) {
+  const cleanName = sanitizeText(name, 120);
+  const cleanEmail = sanitizeEmail(email);
+  if (cleanEmail && employers.some(e => e.email?.toLowerCase() === cleanEmail)) {
     throw new Error('קיים כבר מעסיק עם אימייל זה');
   }
 
-  // Robust next id: max(existing, seq) + 1
   const seq = await get<number>(K.seqEmployer, 1000);
   const maxExisting = employers.reduce((m, e) => Math.max(m, e.employerNo), 0);
   const employerNo = Math.max(seq, maxExisting) + 1;
 
-  const emp: Employer = { employerNo, name, password, email, createdAt: new Date().toISOString() };
+  const passwordHash = await hashPassword(password);
+  const emp: Employer = { employerNo, name: cleanName, password: passwordHash, email: cleanEmail, createdAt: new Date().toISOString() };
   employers.push(emp);
   await set(K.employers, employers);
   await set(K.seqEmployer, employerNo);
@@ -51,16 +53,17 @@ export async function loginEmployer(employerNoStr:string, password:string){
   const no = Number(employerNoStr);
   const emp = employers.find(e => e.employerNo === no);
   if (!emp) throw new Error('מעסיק לא נמצא');
-  if (emp.password !== password) throw new Error('סיסמה שגויה');
+  if (!(await passwordMatches(emp.password, password))) throw new Error('סיסמה שגויה');
   return emp;
 }
 
 export async function resetEmployerPassword(email:string){
   const employers = await get<Employer[]>(K.employers, []);
-  const emp = employers.find(e => e.email?.toLowerCase() === email.toLowerCase());
+  const cleanEmail = sanitizeEmail(email);
+  const emp = employers.find(e => e.email?.toLowerCase() === cleanEmail);
   if (!emp) throw new Error('מעסיק עם אימייל זה לא נמצא');
   const newPassword = randomPassword(10);
-  emp.password = newPassword;
+  emp.password = await hashPassword(newPassword);
   await set(K.employers, employers);
   return { newPassword, employer: emp };
 }
@@ -70,8 +73,8 @@ export async function changeEmployerPassword(employerNoStr:string, oldPass:strin
   const no = Number(employerNoStr);
   const emp = employers.find(e => e.employerNo === no);
   if (!emp) throw new Error('מעסיק לא נמצא');
-  if (emp.password !== oldPass) throw new Error('סיסמה נוכחית שגויה');
-  emp.password = newPass;
+  if (!(await passwordMatches(emp.password, oldPass))) throw new Error('סיסמה נוכחית שגויה');
+  emp.password = await hashPassword(newPass);
   await set(K.employers, employers);
 }
 
@@ -79,11 +82,13 @@ export async function changeEmployerPassword(employerNoStr:string, oldPass:strin
 export async function registerEmployee(fullName:string, tz:string, password:string, employerNoStr:string){
   const workers = await get<Worker[]>(K.workers, []);
   const employers = await get<Employer[]>(K.employers, []);
-  const employerNo = Number(employerNoStr);
+  const employerNo = Number(sanitizeNumericText(employerNoStr, 10));
+  const cleanTz = sanitizeNumericText(tz, 20);
+  const cleanName = sanitizeText(fullName, 120);
   if (!employers.find(e => e.employerNo === employerNo)) throw new Error('מספר מעסיק לא קיים');
 
   // Enforce unique TZ per employer (prevents duplicate "ID" within same company)
-  if (workers.some(w => w.employerNo === employerNo && w.tz === tz)) {
+  if (workers.some(w => w.employerNo === employerNo && w.tz === cleanTz)) {
     throw new Error('כבר קיים עובד עם תעודת זהות זו אצל המעסיק');
   }
 
@@ -92,7 +97,8 @@ export async function registerEmployee(fullName:string, tz:string, password:stri
   const maxExisting = workers.reduce((m, w) => Math.max(m, w.empNo), 0);
   const empNo = Math.max(seq, maxExisting) + 1;
 
-  const w: Worker = { empNo, fullName, tz, password, employerNo, createdAt: new Date().toISOString() };
+  const passwordHash = await hashPassword(password);
+  const w: Worker = { empNo, fullName: cleanName, tz: cleanTz, password: passwordHash, employerNo, createdAt: new Date().toISOString() };
   workers.push(w);
   await set(K.workers, workers);
   await set(K.seqWorker, empNo);
@@ -104,7 +110,7 @@ export async function loginEmployee(empNoStr:string, password:string){
   const no = Number(empNoStr);
   const w = workers.find(x => x.empNo === no);
   if (!w) throw new Error('עובד לא נמצא');
-  if (w.password !== password) throw new Error('סיסמה שגויה');
+  if (!(await passwordMatches(w.password, password))) throw new Error('סיסמה שגויה');
   return w;
 }
 
@@ -113,7 +119,7 @@ export async function resetPasswordToTz(empNoStr:string){
   const no = Number(empNoStr);
   const w = workers.find(x => x.empNo === no);
   if (!w) throw new Error('עובד לא נמצא');
-  w.password = w.tz;
+  w.password = await hashPassword(w.tz);
   await set(K.workers, workers);
 }
 

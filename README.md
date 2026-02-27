@@ -113,7 +113,8 @@ WorkLog-mobile/
 
 2. **Configure environment**
    ```bash
-   cp .env.test.local .env
+   cp .env.example .env
+   # fill in real Supabase values
    ```
 
 3. **Start development server**
@@ -121,10 +122,13 @@ WorkLog-mobile/
    npx expo start
    ```
 
-4. **Run tests**
+4. **Run verification + tests**
    ```bash
+   npm run verify
    npm run test:cov
    ```
+
+Security baseline and release-hardening checklist: `docs/SECURITY_CHECKLIST.md`.
 
 ---
 

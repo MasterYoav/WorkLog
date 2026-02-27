@@ -2,24 +2,31 @@ name: ci-tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: WorkLog-mobile  # << run inside your app folder
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: ci-integration   # <- optional: only if you created this Environment
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run tests
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify
         env:
           CI: true
-        run: npm test -- --ci
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+        run: npm run verify

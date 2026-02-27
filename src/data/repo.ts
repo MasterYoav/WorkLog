@@ -4,6 +4,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
+import {
+  hashPassword,
+  isStrongPassword,
+  isValidEmail,
+  passwordMatches,
+  sanitizeEmail,
+  sanitizeNumericText,
+  sanitizeText,
+} from '../lib/security';
 const FS = FileSystem as any;
 
 // ---------- טיפוסים מהדאטאבייס ----------
@@ -68,12 +77,20 @@ export async function cloudRegisterEmployer(
   email: string,
   password: string
 ): Promise<EmployerRow> {
+  const cleanName = sanitizeText(name, 120);
+  const cleanEmail = sanitizeEmail(email);
+  if (!cleanName) throw new Error('Name is required');
+  if (!isValidEmail(cleanEmail)) throw new Error('Invalid email');
+  if (!isStrongPassword(password)) throw new Error('Password must be at least 8 characters');
+
+  const passwordHash = await hashPassword(password);
+
   const { data, error } = await supabase
     .from('employers')
     .insert({
-      name,
-      email,
-      password_hash: password,
+      name: cleanName,
+      email: cleanEmail,
+      password_hash: passwordHash,
       punch_mode: 'site',
     })
     .select('*')
@@ -86,14 +103,17 @@ export async function cloudLoginEmployer(
   employerNo: number,
   password: string
 ): Promise<EmployerRow> {
+  const cleanNo = Number(sanitizeNumericText(String(employerNo), 10));
+  if (!Number.isFinite(cleanNo)) throw new Error('Invalid employer number');
+
   const { data, error } = await supabase
     .from('employers')
     .select('*')
-    .eq('employer_no', employerNo)
+    .eq('employer_no', cleanNo)
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('Employer not found');
-  if (data.password_hash !== password) throw new Error('Invalid password');
+  if (!(await passwordMatches(data.password_hash, password))) throw new Error('Invalid password');
   return data as EmployerRow;
 }
 
@@ -103,18 +123,25 @@ export async function changeEmployerPasswordCloud(
   newPass: string
 ) {
   // נוודא קודם שהישן נכון
+  if (!isStrongPassword(newPass)) {
+    throw new Error('New password must be at least 8 characters');
+  }
+
   const { data, error } = await supabase
     .from('employers')
     .select('password_hash')
     .eq('employer_no', employerNo)
     .maybeSingle();
   if (error) throw error;
-  if (!data || data.password_hash !== oldPass) {
+  if (!data || !(await passwordMatches(data.password_hash, oldPass))) {
     throw new Error('סיסמה נוכחית שגויה');
   }
+
+  const newHash = await hashPassword(newPass);
+
   const { error: updErr } = await supabase
     .from('employers')
-    .update({ password_hash: newPass })
+    .update({ password_hash: newHash })
     .eq('employer_no', employerNo);
   if (updErr) throw updErr;
 }
@@ -141,13 +168,21 @@ export async function cloudRegisterWorker(
   tz: string,
   password: string
 ): Promise<WorkerRow> {
+  const cleanName = sanitizeText(fullName, 120);
+  const cleanTz = sanitizeNumericText(tz, 20);
+  if (!cleanName) throw new Error('Full name is required');
+  if (cleanTz.length < 8) throw new Error('Invalid ID number');
+  if (!isStrongPassword(password)) throw new Error('Password must be at least 8 characters');
+
+  const passwordHash = await hashPassword(password);
+
   const { data, error } = await supabase
     .from('workers')
     .insert({
       employer_no: employerNo,
-      full_name: fullName,
-      tz,
-      password_hash: password,
+      full_name: cleanName,
+      tz: cleanTz,
+      password_hash: passwordHash,
       punch_mode: 'site',
     })
     .select('*')
@@ -160,7 +195,7 @@ export async function cloudLoginWorker(empNo: number, password: string): Promise
   const { data, error } = await supabase.from('workers').select('*').eq('emp_no', empNo).maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('Worker not found');
-  if (data.password_hash !== password) throw new Error('Invalid password');
+  if (!(await passwordMatches(data.password_hash, password))) throw new Error('Invalid password');
   return data as WorkerRow;
 }
 
@@ -192,12 +227,16 @@ export async function createProjectCloud(
   name: string,
   location: string
 ): Promise<ProjectRow> {
+  const cleanName = sanitizeText(name, 120);
+  const cleanLocation = sanitizeText(location, 240);
+  if (!cleanName) throw new Error('Project name is required');
+
   const { data, error } = await supabase
     .from('projects')
     .insert({
       employer_no: employerNo,
-      name,
-      location,
+      name: cleanName,
+      location: cleanLocation,
     })
     .select('*')
     .single();
