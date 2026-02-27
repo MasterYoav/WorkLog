@@ -132,6 +132,26 @@ Security baseline and release-hardening checklist: `docs/SECURITY_CHECKLIST.md`.
 
 ---
 
+## 📦 Android APK Releases (GitHub)
+
+APK files are published automatically on version tags via:
+
+- `.github/workflows/release-apk.yml`
+
+### Trigger a release
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+The workflow will attach these artifacts to the GitHub Release:
+
+- `WorkLog-debug.apk`
+- `WorkLog-release-unsigned.apk`
+
+> Note: `release-unsigned` is not Play Store-ready by itself. For Play Store production, sign with your release keystore or use EAS signed builds.
+
 ## 📦 Building (EAS)
 
 ```bash
